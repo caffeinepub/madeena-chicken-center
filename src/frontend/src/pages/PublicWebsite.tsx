@@ -142,10 +142,11 @@ export default function PublicWebsite() {
   const [customerPhone, setCustomerPhone] = useState("");
   const [lastOrderId, setLastOrderId] = useState<bigint | null>(null);
 
-  const { data: backendProducts, isLoading } = useGetProducts();
+  const { data: backendProducts } = useGetProducts();
   const placeOrderMutation = usePlaceOrder();
   const initializeProducts = useInitializeProducts();
 
+  // Always show products immediately -- use fallback until backend loads
   const products =
     backendProducts && backendProducts.length > 0
       ? backendProducts
@@ -446,82 +447,185 @@ export default function PublicWebsite() {
       {/* ======= HERO SECTION ======= */}
       <section
         id="home"
-        className="relative min-h-[90vh] flex items-center overflow-hidden"
+        className="relative min-h-screen flex items-center overflow-hidden"
+        style={{
+          background:
+            "linear-gradient(135deg, #7a0a0a 0%, #b91c1c 40%, #c2410c 100%)",
+        }}
       >
-        <div className="absolute inset-0">
+        {/* Background texture overlay */}
+        <div className="absolute inset-0 opacity-20">
           <img
-            src="/assets/generated/hero-banner.dim_1200x500.jpg"
-            alt="Fresh chicken shop"
-            className="w-full h-full object-cover"
+            src="/assets/generated/hero-bg-red.dim_1920x1080.jpg"
+            alt=""
+            className="w-full h-full object-cover object-center"
+            aria-hidden="true"
           />
-          <div className="hero-overlay absolute inset-0" />
         </div>
 
-        <div className="relative container mx-auto px-4 py-32">
-          <motion.div
-            initial="hidden"
-            animate="visible"
-            variants={staggerContainer}
-            className="max-w-3xl"
-          >
-            <motion.div variants={fadeInUpVariants}>
-              <Badge className="bg-accent/20 text-accent border-accent/30 text-sm mb-4 backdrop-blur-sm">
-                ✨ Fresh Every Day
-              </Badge>
-            </motion.div>
+        {/* Decorative red circle on the right like reference design */}
+        <div
+          className="absolute right-0 top-1/2 -translate-y-1/2 rounded-full pointer-events-none"
+          style={{
+            width: "clamp(320px, 55vw, 700px)",
+            height: "clamp(320px, 55vw, 700px)",
+            background:
+              "radial-gradient(circle, rgba(220,38,38,0.7) 0%, rgba(180,20,20,0.4) 60%, transparent 100%)",
+            transform: "translate(15%, -50%)",
+          }}
+        />
 
-            <motion.h1
-              variants={fadeInUpVariants}
-              className="font-display text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-white leading-tight mb-2"
-            >
-              MADEENA
-              <span className="block text-accent">CHICKEN CENTER</span>
-            </motion.h1>
-
-            <motion.p
-              variants={fadeInUpVariants}
-              className="text-yellow-200 text-xl md:text-2xl font-medium mb-1"
-            >
-              మదీనా చికెన్ సెంటర్
-            </motion.p>
-
-            <motion.p
-              variants={fadeInUpVariants}
-              className="text-white/90 text-xl md:text-2xl font-semibold mt-4 mb-2"
-            >
-              Fresh & Quality Chicken Everyday
-            </motion.p>
-
-            <motion.p
-              variants={fadeInUpVariants}
-              className="text-yellow-200/80 text-base mb-8"
-            >
-              తాజా మరియు నాణ్యమైన చికెన్ రోజూ
-            </motion.p>
-
+        <div className="relative w-full container mx-auto px-6 py-28 md:py-36">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-10">
+            {/* LEFT: Text content */}
             <motion.div
-              variants={fadeInUpVariants}
-              className="flex flex-wrap gap-4"
+              initial="hidden"
+              animate="visible"
+              variants={staggerContainer}
+              className="flex-1 max-w-xl z-10"
             >
-              <Button
-                data-ocid="hero.order_button"
-                onClick={() => scrollToSection("products")}
-                size="lg"
-                className="bg-primary hover:bg-primary/90 text-white shadow-brand font-bold text-base px-8"
+              <motion.div variants={fadeInUpVariants} className="mb-4">
+                <span className="inline-block bg-white/15 backdrop-blur-sm text-yellow-300 text-sm font-semibold px-4 py-1.5 rounded-full border border-yellow-300/30">
+                  ✨ Fresh & Hygienic Every Day
+                </span>
+              </motion.div>
+
+              <motion.h1
+                variants={fadeInUpVariants}
+                className="font-display font-black leading-tight mb-3"
+                style={{ fontSize: "clamp(2.2rem, 5vw, 4rem)" }}
               >
-                Order Now
-              </Button>
-              <Button
-                onClick={() => scrollToSection("contact")}
-                size="lg"
-                variant="outline"
-                className="border-white/60 text-white bg-white/10 hover:bg-white/20 backdrop-blur-sm font-semibold text-base px-8"
+                <span className="text-white drop-shadow-lg">Get Your</span>
+                <span className="block text-yellow-300 drop-shadow-lg">
+                  Fresh Chicken
+                </span>
+                <span className="text-white drop-shadow-lg">With Quality</span>
+              </motion.h1>
+
+              <motion.div variants={fadeInUpVariants} className="mb-2">
+                <p className="text-3xl md:text-4xl font-extrabold text-white drop-shadow-lg tracking-wide">
+                  MADEENA
+                </p>
+                <p className="text-3xl md:text-4xl font-extrabold text-yellow-300 drop-shadow-lg tracking-wide">
+                  CHICKEN CENTER
+                </p>
+                <p className="text-lg text-yellow-200/90 font-medium mt-1">
+                  మదీనా చికెన్ సెంటర్
+                </p>
+              </motion.div>
+
+              <motion.p
+                variants={fadeInUpVariants}
+                className="text-white/80 text-base md:text-lg mb-8 leading-relaxed"
               >
-                <Phone className="mr-2 h-4 w-4" />
-                Call Us
-              </Button>
+                Indulge in fresh, hygienic chicken everyday. Taste the Quality!
+                <span className="block text-yellow-200/70 text-sm mt-1">
+                  తాజా మరియు నాణ్యమైన చికెన్ రోజూ
+                </span>
+              </motion.p>
+
+              <motion.div
+                variants={fadeInUpVariants}
+                className="flex flex-wrap gap-4 mb-10"
+              >
+                <Button
+                  data-ocid="hero.order_button"
+                  onClick={() => scrollToSection("products")}
+                  size="lg"
+                  className="bg-white text-red-700 hover:bg-yellow-300 hover:text-red-800 font-black text-base px-8 shadow-xl transition-all"
+                >
+                  Order Now
+                </Button>
+                <Button
+                  onClick={() => scrollToSection("contact")}
+                  size="lg"
+                  variant="outline"
+                  className="border-white/60 text-white bg-white/10 hover:bg-white/20 backdrop-blur-sm font-semibold text-base px-8"
+                >
+                  <Phone className="mr-2 h-4 w-4" />
+                  Call Us
+                </Button>
+              </motion.div>
+
+              {/* Stats row */}
+              <motion.div
+                variants={fadeInUpVariants}
+                className="flex gap-8 flex-wrap"
+              >
+                {[
+                  { value: "10K+", label: "Happy Customers" },
+                  { value: "100%", label: "Fresh Daily" },
+                  { value: "3+", label: "Chicken Varieties" },
+                ].map((stat) => (
+                  <div key={stat.label} className="text-left">
+                    <p className="text-2xl md:text-3xl font-black text-white">
+                      {stat.value}
+                    </p>
+                    <p className="text-white/60 text-xs font-medium">
+                      {stat.label}
+                    </p>
+                  </div>
+                ))}
+              </motion.div>
             </motion.div>
-          </motion.div>
+
+            {/* RIGHT: Chicken image */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8, x: 60 }}
+              animate={{ opacity: 1, scale: 1, x: 0 }}
+              transition={{
+                duration: 0.8,
+                ease: [0.25, 0.46, 0.45, 0.94],
+                delay: 0.2,
+              }}
+              className="flex-shrink-0 flex items-center justify-center z-10"
+              style={{
+                width: "clamp(260px, 40vw, 500px)",
+                height: "clamp(260px, 40vw, 500px)",
+              }}
+            >
+              {/* Circular glowing backdrop */}
+              <div className="relative w-full h-full">
+                <div
+                  className="absolute inset-0 rounded-full"
+                  style={{
+                    background:
+                      "radial-gradient(circle, rgba(255,200,0,0.25) 0%, rgba(220,38,38,0.3) 50%, transparent 75%)",
+                  }}
+                />
+                <motion.img
+                  src="/assets/generated/hero-chicken-dish.dim_700x700.png"
+                  alt="Fresh chicken dish at Madeena Chicken Center"
+                  className="relative z-10 w-full h-full object-contain drop-shadow-2xl"
+                  animate={{ y: [0, -12, 0] }}
+                  transition={{
+                    repeat: Number.POSITIVE_INFINITY,
+                    duration: 4,
+                    ease: "easeInOut",
+                  }}
+                />
+                {/* Price badge like reference */}
+                <motion.div
+                  initial={{ opacity: 0, scale: 0 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.8, type: "spring" }}
+                  className="absolute bottom-6 right-2 bg-white rounded-xl px-3 py-2 shadow-xl z-20"
+                >
+                  <p className="text-xs text-gray-500 font-medium">From</p>
+                  <p className="text-lg font-black text-red-600">₹180/kg</p>
+                </motion.div>
+                {/* Fresh badge */}
+                <motion.div
+                  initial={{ opacity: 0, scale: 0 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 1, type: "spring" }}
+                  className="absolute top-8 left-0 bg-yellow-400 text-red-800 rounded-xl px-3 py-1.5 shadow-xl z-20 font-bold text-sm"
+                >
+                  20% Fresh Daily
+                </motion.div>
+              </div>
+            </motion.div>
+          </div>
         </div>
 
         {/* Scroll down arrow */}
@@ -659,80 +763,66 @@ export default function PublicWebsite() {
               <div className="w-16 h-1 bg-accent mx-auto rounded-full mt-3" />
             </motion.div>
 
-            {isLoading ? (
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {["s1", "s2", "s3", "s4"].map((sk) => (
-                  <div
-                    key={sk}
-                    className="rounded-2xl bg-white border border-border overflow-hidden animate-pulse"
-                  >
-                    <div className="h-48 bg-muted" />
-                    <div className="p-4 space-y-2">
-                      <div className="h-4 bg-muted rounded w-3/4" />
-                      <div className="h-3 bg-muted rounded w-1/2" />
-                      <div className="h-8 bg-muted rounded mt-4" />
-                    </div>
+            <motion.div
+              variants={staggerContainer}
+              className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+            >
+              {products.map((product, index) => (
+                <motion.div
+                  key={product.id.toString()}
+                  data-ocid={`product.card.${index + 1}`}
+                  variants={fadeInUpVariants}
+                  className="rounded-2xl bg-white border border-border overflow-hidden shadow-xs card-hover group"
+                >
+                  <div className="relative overflow-hidden h-48">
+                    <img
+                      src={getProductImage(product)}
+                      alt={product.nameEn}
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      loading="lazy"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src =
+                          "/assets/generated/product-broiler.dim_400x400.jpg";
+                      }}
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+                    <Badge className="absolute top-3 right-3 bg-accent text-accent-foreground font-bold text-sm shadow">
+                      ₹{getProductPrice(product)}/kg
+                    </Badge>
+                    {!product.isAvailable && (
+                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                        <Badge className="bg-red-700 text-white">
+                          Not Available
+                        </Badge>
+                      </div>
+                    )}
                   </div>
-                ))}
-              </div>
-            ) : (
-              <motion.div
-                variants={staggerContainer}
-                className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
-              >
-                {products.map((product, index) => (
-                  <motion.div
-                    key={product.id.toString()}
-                    data-ocid={`product.card.${index + 1}`}
-                    variants={fadeInUpVariants}
-                    className="rounded-2xl bg-white border border-border overflow-hidden shadow-xs card-hover group"
-                  >
-                    <div className="relative overflow-hidden h-48">
-                      <img
-                        src={getProductImage(product)}
-                        alt={product.nameEn}
-                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                        loading="lazy"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
-                      <Badge className="absolute top-3 right-3 bg-accent text-accent-foreground font-bold text-sm shadow">
-                        ₹{getProductPrice(product)}/kg
-                      </Badge>
-                      {!product.isAvailable && (
-                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                          <Badge className="bg-red-700 text-white">
-                            Not Available
-                          </Badge>
-                        </div>
-                      )}
-                    </div>
 
-                    <div className="p-4">
-                      <h3 className="font-semibold text-foreground text-base leading-tight">
-                        {product.nameEn}
-                      </h3>
-                      <p className="text-accent text-sm font-medium mt-0.5">
-                        {product.nameTe}
-                      </p>
-                      <p className="text-muted-foreground text-xs mt-1.5 line-clamp-2">
-                        {product.description}
-                      </p>
+                  <div className="p-4">
+                    <h3 className="font-semibold text-foreground text-base leading-tight">
+                      {product.nameEn}
+                    </h3>
+                    <p className="text-accent text-sm font-medium mt-0.5">
+                      {product.nameTe}
+                    </p>
+                    <p className="text-muted-foreground text-xs mt-1.5 line-clamp-2">
+                      {product.description}
+                    </p>
 
-                      <Button
-                        data-ocid={`product.add_button.${index + 1}`}
-                        onClick={() => addToCart(product)}
-                        disabled={!product.isAvailable}
-                        className="w-full mt-4 bg-primary hover:bg-primary/90 text-white font-semibold"
-                        size="sm"
-                      >
-                        <ShoppingCart className="mr-2 h-4 w-4" />
-                        Add to Order
-                      </Button>
-                    </div>
-                  </motion.div>
-                ))}
-              </motion.div>
-            )}
+                    <Button
+                      data-ocid={`product.add_button.${index + 1}`}
+                      onClick={() => addToCart(product)}
+                      disabled={!product.isAvailable}
+                      className="w-full mt-4 bg-primary hover:bg-primary/90 text-white font-semibold"
+                      size="sm"
+                    >
+                      <ShoppingCart className="mr-2 h-4 w-4" />
+                      Add to Order
+                    </Button>
+                  </div>
+                </motion.div>
+              ))}
+            </motion.div>
           </motion.div>
         </div>
       </section>
