@@ -35,14 +35,15 @@ import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
-  useGetDailyStats,
   useGetProducts,
-  useGetTodayOrders,
   useInitializeProducts,
-  useUpdateOrderStatus,
+  useRemoveProductImage,
+  useRemoveSiteMediaImage,
+  useSaveProductImage,
+  useSaveSiteMediaImage,
   useUpdateProductRate,
 } from "../hooks/useQueries";
-import type { Order, Product } from "../hooks/useQueries";
+import type { Product } from "../hooks/useQueries";
 
 // ======= IMAGE STORAGE HELPERS =======
 export const PRODUCT_IMAGE_STORAGE_KEY = "madeena_product_images";
@@ -66,6 +67,79 @@ function removeStoredProductImage(productId: string) {
   const current = getStoredProductImages();
   delete current[productId];
   localStorage.setItem(PRODUCT_IMAGE_STORAGE_KEY, JSON.stringify(current));
+}
+
+// ======= SITE MEDIA STORAGE HELPERS =======
+export const SITE_MEDIA_STORAGE_KEY = "madeena_site_media";
+
+export function getStoredSiteMedia(): Record<string, string> {
+  try {
+    const raw = localStorage.getItem(SITE_MEDIA_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+function setStoredSiteMediaItem(key: string, dataUrl: string) {
+  const current = getStoredSiteMedia();
+  current[key] = dataUrl;
+  localStorage.setItem(SITE_MEDIA_STORAGE_KEY, JSON.stringify(current));
+}
+
+function removeStoredSiteMediaItem(key: string) {
+  const current = getStoredSiteMedia();
+  delete current[key];
+  localStorage.setItem(SITE_MEDIA_STORAGE_KEY, JSON.stringify(current));
+}
+
+// ======= LOCAL ORDERS STORAGE HELPERS =======
+export const LOCAL_ORDERS_STORAGE_KEY = "madeena_local_orders";
+
+export interface LocalOrder {
+  id: string;
+  customerName: string;
+  customerPhone: string;
+  items: Array<{
+    productId: string;
+    productName: string;
+    quantity: number;
+    unit: string;
+    pricePerKg: number;
+  }>;
+  totalAmount: number;
+  status: "pending" | "completed";
+  createdAt: number; // timestamp ms
+  orderDate: string; // YYYY-MM-DD
+}
+
+export function getLocalOrders(): LocalOrder[] {
+  try {
+    const raw = localStorage.getItem(LOCAL_ORDERS_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function saveLocalOrder(order: LocalOrder) {
+  const orders = getLocalOrders();
+  orders.unshift(order); // newest first
+  localStorage.setItem(LOCAL_ORDERS_STORAGE_KEY, JSON.stringify(orders));
+}
+
+export function updateLocalOrderStatus(
+  orderId: string,
+  status: "pending" | "completed",
+) {
+  const orders = getLocalOrders();
+  const updated = orders.map((o) => (o.id === orderId ? { ...o, status } : o));
+  localStorage.setItem(LOCAL_ORDERS_STORAGE_KEY, JSON.stringify(updated));
+}
+
+export function getTodayLocalOrders(): LocalOrder[] {
+  const today = new Date().toISOString().split("T")[0];
+  return getLocalOrders().filter((o) => o.orderDate === today);
 }
 
 // ======= PRICE STORAGE HELPERS =======
@@ -92,24 +166,6 @@ const ADMIN_PASSWORD = "madeena2024";
 
 function getTodayDate() {
   return new Date().toISOString().split("T")[0];
-}
-
-function formatTime(nanoseconds: bigint): string {
-  const ms = Number(nanoseconds / BigInt(1_000_000));
-  return new Date(ms).toLocaleTimeString("en-IN", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: true,
-  });
-}
-
-function formatOrderItems(order: Order, products: Product[]): string {
-  return order.products
-    .map((item) => {
-      const product = products.find((p) => p.id === item.productId);
-      return `${product?.nameEn || "Item"} ×${item.quantity}${item.unit}`;
-    })
-    .join(", ");
 }
 
 // ======= LOGIN PAGE =======
@@ -287,6 +343,165 @@ function StatCard({
   );
 }
 
+// ======= SITE MEDIA CARD =======
+function SiteMediaCard() {
+  const [media, setMedia] =
+    useState<Record<string, string>>(getStoredSiteMedia);
+  const saveSiteMediaMutation = useSaveSiteMediaImage();
+  const removeSiteMediaMutation = useRemoveSiteMediaImage();
+
+  const slots = [
+    {
+      key: "heroBg",
+      label: "Hero Background Image",
+      hint: "Background shown behind the hero section",
+      ocidIndex: 1,
+    },
+    {
+      key: "heroChicken",
+      label: "Hero Chicken Image",
+      hint: "Floating chicken photo on the right side of hero",
+      ocidIndex: 2,
+    },
+    {
+      key: "navLogo",
+      label: "Navbar Logo",
+      hint: "Small logo/icon shown in the header next to the brand name",
+      ocidIndex: 3,
+    },
+  ];
+
+  function handleMediaChange(
+    key: string,
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select a valid image file.");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image must be under 5 MB.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = async (ev) => {
+      const dataUrl = ev.target?.result as string;
+      setStoredSiteMediaItem(key, dataUrl);
+      setMedia((prev) => ({ ...prev, [key]: dataUrl }));
+      // Also save to backend so all users see the updated image
+      try {
+        await saveSiteMediaMutation.mutateAsync({ key, dataUrl });
+      } catch {
+        // Silent fail — localStorage is still saved as fallback
+      }
+      toast.success("Site media updated! Changes are live on the website.");
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  }
+
+  async function handleRemoveMedia(key: string) {
+    removeStoredSiteMediaItem(key);
+    setMedia((prev) => {
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+    // Also remove from backend
+    try {
+      await removeSiteMediaMutation.mutateAsync(key);
+    } catch {
+      // Silent fail
+    }
+    toast.success("Image removed. Default image restored.");
+  }
+
+  return (
+    <div className="bg-white rounded-2xl border border-border shadow-xs overflow-hidden">
+      <div className="p-5 border-b border-border flex items-center gap-3">
+        <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
+          <ImagePlus className="h-4 w-4 text-blue-600" />
+        </div>
+        <div>
+          <h3 className="font-semibold text-foreground">Site Media</h3>
+          <p className="text-xs text-muted-foreground">
+            Change homepage images and site logo — updates go live instantly
+          </p>
+        </div>
+      </div>
+      <div className="divide-y divide-border">
+        {slots.map((slot) => {
+          const uploaded = media[slot.key];
+          return (
+            <div key={slot.key} className="p-4 flex items-center gap-4">
+              {/* Thumbnail */}
+              <div className="w-16 h-16 rounded-xl overflow-hidden border border-border flex-shrink-0 bg-muted">
+                {uploaded ? (
+                  <img
+                    src={uploaded}
+                    alt={slot.label}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <ImagePlus className="h-6 w-6 text-muted-foreground/40" />
+                  </div>
+                )}
+              </div>
+
+              {/* Label + hint */}
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-sm text-foreground">
+                  {slot.label}
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {slot.hint}
+                </p>
+                {uploaded && (
+                  <span className="inline-flex items-center gap-1 text-xs text-green-600 font-medium mt-1">
+                    <Check className="h-3 w-3" />
+                    Custom image uploaded
+                  </span>
+                )}
+              </div>
+
+              {/* Actions */}
+              <div className="flex items-center gap-1.5 flex-shrink-0">
+                <label
+                  className="cursor-pointer inline-flex items-center gap-1 text-xs font-medium rounded-md border border-input bg-background px-2 py-1.5 shadow-sm hover:bg-accent hover:text-accent-foreground transition-colors select-none"
+                  data-ocid={`admin.media.upload_button.${slot.ocidIndex}`}
+                >
+                  <Upload className="h-3.5 w-3.5" />
+                  {uploaded ? "Change" : "Upload"}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => handleMediaChange(slot.key, e)}
+                  />
+                </label>
+                {uploaded && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleRemoveMedia(slot.key)}
+                    className="gap-1 text-xs border-red-200 text-red-600 hover:bg-red-50 px-2 py-1.5 h-auto"
+                    data-ocid={`admin.media.delete_button.${slot.ocidIndex}`}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ======= PRODUCT EDITOR CARD (prices + images combined) =======
 function ProductEditorCard({ products }: { products: Product[] }) {
   const [images, setImages] = useState<Record<string, string>>(
@@ -307,6 +522,8 @@ function ProductEditorCard({ products }: { products: Product[] }) {
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
   const [pendingIds, setPendingIds] = useState<Set<string>>(new Set());
   const updateRate = useUpdateProductRate();
+  const saveProductImageMutation = useSaveProductImage();
+  const removeProductImageMutation = useRemoveProductImage();
 
   // Sync prices when products load/change (only for ids not yet in state)
   useEffect(() => {
@@ -377,18 +594,27 @@ function ProductEditorCard({ products }: { products: Product[] }) {
       return;
     }
     const reader = new FileReader();
-    reader.onload = (ev) => {
+    reader.onload = async (ev) => {
       const dataUrl = ev.target?.result as string;
       const idStr = product.id.toString();
       setStoredProductImage(idStr, dataUrl);
       setImages((prev) => ({ ...prev, [idStr]: dataUrl }));
+      // Also save to backend so all users see the updated image
+      try {
+        await saveProductImageMutation.mutateAsync({
+          productId: idStr,
+          dataUrl,
+        });
+      } catch {
+        // Silent fail — localStorage is still saved as fallback
+      }
       toast.success(`Image updated for ${product.nameEn}`);
     };
     reader.readAsDataURL(file);
     e.target.value = "";
   }
 
-  function handleResetImage(product: Product) {
+  async function handleResetImage(product: Product) {
     const idStr = product.id.toString();
     removeStoredProductImage(idStr);
     setImages((prev) => {
@@ -396,6 +622,12 @@ function ProductEditorCard({ products }: { products: Product[] }) {
       delete next[idStr];
       return next;
     });
+    // Also remove from backend
+    try {
+      await removeProductImageMutation.mutateAsync(idStr);
+    } catch {
+      // Silent fail
+    }
     toast.success(`Image reset for ${product.nameEn}`);
   }
 
@@ -586,16 +818,15 @@ const ADMIN_FALLBACK_PRODUCTS: Product[] = [
 // ======= DASHBOARD =======
 function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   const today = getTodayDate();
-  const {
-    data: orders = [],
-    refetch: refetchOrders,
-    isFetching: isOrdersFetching,
-  } = useGetTodayOrders();
-  const { data: stats, refetch: refetchStats } = useGetDailyStats(today);
   const { data: products = [] } = useGetProducts();
-  const updateStatus = useUpdateOrderStatus();
   const initializeProducts = useInitializeProducts();
   const [lastRefresh, setLastRefresh] = useState(new Date());
+
+  // Local orders state -- primary source of truth for the admin portal
+  const [localOrders, setLocalOrders] = useState<LocalOrder[]>(() =>
+    getTodayLocalOrders(),
+  );
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Initialize products if empty
   const adminInitMutate = initializeProducts.mutate;
@@ -605,37 +836,47 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
     }
   }, [products.length, adminInitMutate]);
 
-  const handleRefresh = useCallback(() => {
-    refetchOrders();
-    refetchStats();
+  // Refresh local orders from localStorage
+  const refreshLocalOrders = useCallback(() => {
+    setLocalOrders(getTodayLocalOrders());
     setLastRefresh(new Date());
-  }, [refetchOrders, refetchStats]);
+  }, []);
 
-  // Auto-refresh every 30 seconds
+  const handleRefresh = useCallback(() => {
+    setIsRefreshing(true);
+    refreshLocalOrders();
+    setTimeout(() => setIsRefreshing(false), 500);
+  }, [refreshLocalOrders]);
+
+  // Auto-refresh every 15 seconds + listen for storage events
   useEffect(() => {
-    const timer = setInterval(handleRefresh, 30 * 1000);
-    return () => clearInterval(timer);
-  }, [handleRefresh]);
+    const timer = setInterval(handleRefresh, 15 * 1000);
+    const storageHandler = (e: StorageEvent) => {
+      if (e.key === LOCAL_ORDERS_STORAGE_KEY) refreshLocalOrders();
+    };
+    window.addEventListener("storage", storageHandler);
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener("storage", storageHandler);
+    };
+  }, [handleRefresh, refreshLocalOrders]);
 
   const displayProducts =
     products.length > 0 ? products : ADMIN_FALLBACK_PRODUCTS;
 
-  const totalOrders = stats ? Number(stats.totalOrders) : orders.length;
-  const completedOrders = stats
-    ? Number(stats.completedOrders)
-    : orders.filter((o) => o.status === "completed").length;
+  const totalOrders = localOrders.length;
+  const completedOrders = localOrders.filter(
+    (o) => o.status === "completed",
+  ).length;
   const pendingOrders = totalOrders - completedOrders;
-  const totalRevenue = stats
-    ? stats.totalRevenue
-    : orders.reduce((sum, o) => sum + o.totalAmount, 0);
+  const totalRevenue = localOrders
+    .filter((o) => o.status === "completed")
+    .reduce((sum, o) => sum + o.totalAmount, 0);
 
-  async function handleMarkComplete(orderId: bigint, _index: number) {
-    try {
-      await updateStatus.mutateAsync({ orderId, status: "completed" });
-      toast.success(`Order #${orderId} marked as completed.`);
-    } catch {
-      toast.error("Failed to update order status.");
-    }
+  function handleMarkComplete(orderId: string) {
+    updateLocalOrderStatus(orderId, "completed");
+    refreshLocalOrders();
+    toast.success(`Order #${orderId} marked as completed.`);
   }
 
   return (
@@ -665,7 +906,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
               className="gap-2 text-xs"
             >
               <RefreshCw
-                className={`h-3.5 w-3.5 ${isOrdersFetching ? "animate-spin" : ""}`}
+                className={`h-3.5 w-3.5 ${isRefreshing ? "animate-spin" : ""}`}
               />
               <span className="hidden sm:inline">Refresh</span>
             </Button>
@@ -728,6 +969,9 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
           • Auto-refreshes every 30 seconds
         </p>
 
+        {/* Site Media Editor */}
+        <SiteMediaCard />
+
         {/* Today's Price List & Image Editor */}
         <ProductEditorCard products={displayProducts} />
 
@@ -743,7 +987,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                   Today's Orders
                 </h3>
                 <p className="text-xs text-muted-foreground">
-                  {orders.length} orders on {today}
+                  {localOrders.length} orders on {today}
                 </p>
               </div>
             </div>
@@ -759,7 +1003,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
           </div>
 
           <div className="overflow-x-auto" data-ocid="admin.orders_table">
-            {orders.length === 0 ? (
+            {localOrders.length === 0 ? (
               <div className="text-center py-16 text-muted-foreground">
                 <ShoppingBag className="h-12 w-12 mx-auto mb-3 opacity-20" />
                 <p className="font-medium">No orders today yet</p>
@@ -798,13 +1042,10 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {orders.map((order, index) => (
-                    <TableRow
-                      key={order.id.toString()}
-                      className="hover:bg-muted/20"
-                    >
+                  {localOrders.map((order, index) => (
+                    <TableRow key={order.id} className="hover:bg-muted/20">
                       <TableCell className="font-mono text-xs text-muted-foreground">
-                        #{order.id.toString()}
+                        #{order.id.slice(-6)}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
@@ -827,7 +1068,12 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                       </TableCell>
                       <TableCell>
                         <span className="text-xs text-muted-foreground max-w-[160px] block truncate">
-                          {formatOrderItems(order, products)}
+                          {order.items
+                            .map(
+                              (item) =>
+                                `${item.productName} ×${item.quantity}${item.unit}`,
+                            )
+                            .join(", ")}
                         </span>
                       </TableCell>
                       <TableCell className="text-right">
@@ -849,15 +1095,18 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
-                        {formatTime(order.createdAt)}
+                        {new Date(order.createdAt).toLocaleTimeString("en-IN", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                          hour12: true,
+                        })}
                       </TableCell>
                       <TableCell>
                         {order.status !== "completed" ? (
                           <Button
                             data-ocid={`admin.order.complete_button.${index + 1}`}
                             size="sm"
-                            onClick={() => handleMarkComplete(order.id, index)}
-                            disabled={updateStatus.isPending}
+                            onClick={() => handleMarkComplete(order.id)}
                             className="bg-green-500 hover:bg-green-600 text-white text-xs h-7 px-2"
                           >
                             <CheckCircle className="h-3.5 w-3.5 mr-1" />

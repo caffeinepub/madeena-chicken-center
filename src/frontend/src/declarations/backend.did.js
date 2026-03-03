@@ -51,7 +51,17 @@ export const idlService = IDL.Service({
   'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
   'getDailyStats' : IDL.Func([IDL.Text], [DailyStats], ['query']),
   'getOrders' : IDL.Func([IDL.Text], [IDL.Vec(Order)], ['query']),
+  'getProductImages' : IDL.Func(
+      [],
+      [IDL.Vec(IDL.Tuple(IDL.Text, IDL.Text))],
+      ['query'],
+    ),
   'getProducts' : IDL.Func([], [IDL.Vec(Product)], ['query']),
+  'getSiteMediaImages' : IDL.Func(
+      [],
+      [IDL.Vec(IDL.Tuple(IDL.Text, IDL.Text))],
+      ['query'],
+    ),
   'getTodayOrders' : IDL.Func([], [IDL.Vec(Order)], ['query']),
   'getUserProfile' : IDL.Func(
       [IDL.Principal],
@@ -65,7 +75,11 @@ export const idlService = IDL.Service({
       [IDL.Nat],
       [],
     ),
+  'removeProductImage' : IDL.Func([IDL.Text], [], []),
+  'removeSiteMediaImage' : IDL.Func([IDL.Text], [], []),
   'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
+  'saveProductImage' : IDL.Func([IDL.Text, IDL.Text], [], []),
+  'saveSiteMediaImage' : IDL.Func([IDL.Text, IDL.Text], [], []),
   'updateOrderStatus' : IDL.Func([IDL.Nat, IDL.Text], [], []),
   'updateProductRate' : IDL.Func([IDL.Nat, IDL.Float64], [], []),
 });
@@ -116,7 +130,17 @@ export const idlFactory = ({ IDL }) => {
     'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
     'getDailyStats' : IDL.Func([IDL.Text], [DailyStats], ['query']),
     'getOrders' : IDL.Func([IDL.Text], [IDL.Vec(Order)], ['query']),
+    'getProductImages' : IDL.Func(
+        [],
+        [IDL.Vec(IDL.Tuple(IDL.Text, IDL.Text))],
+        ['query'],
+      ),
     'getProducts' : IDL.Func([], [IDL.Vec(Product)], ['query']),
+    'getSiteMediaImages' : IDL.Func(
+        [],
+        [IDL.Vec(IDL.Tuple(IDL.Text, IDL.Text))],
+        ['query'],
+      ),
     'getTodayOrders' : IDL.Func([], [IDL.Vec(Order)], ['query']),
     'getUserProfile' : IDL.Func(
         [IDL.Principal],
@@ -130,7 +154,11 @@ export const idlFactory = ({ IDL }) => {
         [IDL.Nat],
         [],
       ),
+    'removeProductImage' : IDL.Func([IDL.Text], [], []),
+    'removeSiteMediaImage' : IDL.Func([IDL.Text], [], []),
     'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
+    'saveProductImage' : IDL.Func([IDL.Text, IDL.Text], [], []),
+    'saveSiteMediaImage' : IDL.Func([IDL.Text, IDL.Text], [], []),
     'updateOrderStatus' : IDL.Func([IDL.Nat, IDL.Text], [], []),
     'updateProductRate' : IDL.Func([IDL.Nat, IDL.Float64], [], []),
   });

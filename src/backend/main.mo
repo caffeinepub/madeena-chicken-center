@@ -13,6 +13,9 @@ import MixinAuthorization "authorization/MixinAuthorization";
 import AccessControl "authorization/access-control";
 import Char "mo:core/Char";
 
+
+// Use migration module for upgrades
+
 actor {
   // Types
   type Product = {
@@ -58,6 +61,10 @@ actor {
   var nextProductId = 1;
   var nextOrderId = 1;
   var isInitialized = false;
+
+  // Image storage
+  let productImages = Map.empty<Text, Text>(); // productId -> base64 dataUrl
+  let siteMediaImages = Map.empty<Text, Text>(); // key -> base64 dataUrl
 
   // Authorization
   let accessControlState = AccessControl.initState();
@@ -336,5 +343,43 @@ actor {
         Runtime.trap("Product not found");
       };
     };
+  };
+
+  // Product Image Handling (backend as source of truth)
+  public shared ({ caller }) func saveProductImage(productId : Text, dataUrl : Text) : async () {
+    if (not AccessControl.isAdmin(accessControlState, caller)) {
+      Runtime.trap("Unauthorized: Only admins can save product images");
+    };
+    productImages.add(productId, dataUrl);
+  };
+
+  public shared ({ caller }) func removeProductImage(productId : Text) : async () {
+    if (not AccessControl.isAdmin(accessControlState, caller)) {
+      Runtime.trap("Unauthorized: Only admins can remove product images");
+    };
+    productImages.remove(productId);
+  };
+
+  public query ({ caller }) func getProductImages() : async [(Text, Text)] {
+    productImages.toArray();
+  };
+
+  // Site Media Image Handling (backend as source of truth)
+  public shared ({ caller }) func saveSiteMediaImage(key : Text, dataUrl : Text) : async () {
+    if (not AccessControl.isAdmin(accessControlState, caller)) {
+      Runtime.trap("Unauthorized: Only admins can save site media images");
+    };
+    siteMediaImages.add(key, dataUrl);
+  };
+
+  public shared ({ caller }) func removeSiteMediaImage(key : Text) : async () {
+    if (not AccessControl.isAdmin(accessControlState, caller)) {
+      Runtime.trap("Unauthorized: Only admins can remove site media images");
+    };
+    siteMediaImages.remove(key);
+  };
+
+  public query ({ caller }) func getSiteMediaImages() : async [(Text, Text)] {
+    siteMediaImages.toArray();
   };
 };

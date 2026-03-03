@@ -50,13 +50,19 @@ export interface backendInterface {
     getCallerUserRole(): Promise<UserRole>;
     getDailyStats(date: string): Promise<DailyStats>;
     getOrders(date: string): Promise<Array<Order>>;
+    getProductImages(): Promise<Array<[string, string]>>;
     getProducts(): Promise<Array<Product>>;
+    getSiteMediaImages(): Promise<Array<[string, string]>>;
     getTodayOrders(): Promise<Array<Order>>;
     getUserProfile(user: Principal): Promise<UserProfile | null>;
     initializeProducts(): Promise<void>;
     isCallerAdmin(): Promise<boolean>;
     placeOrder(customerName: string, customerPhone: string, items: Array<OrderItem>): Promise<bigint>;
+    removeProductImage(productId: string): Promise<void>;
+    removeSiteMediaImage(key: string): Promise<void>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
+    saveProductImage(productId: string, dataUrl: string): Promise<void>;
+    saveSiteMediaImage(key: string, dataUrl: string): Promise<void>;
     updateOrderStatus(orderId: bigint, status: string): Promise<void>;
     updateProductRate(productId: bigint, newPrice: number): Promise<void>;
 }

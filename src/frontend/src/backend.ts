@@ -133,13 +133,19 @@ export interface backendInterface {
     getCallerUserRole(): Promise<UserRole>;
     getDailyStats(date: string): Promise<DailyStats>;
     getOrders(date: string): Promise<Array<Order>>;
+    getProductImages(): Promise<Array<[string, string]>>;
     getProducts(): Promise<Array<Product>>;
+    getSiteMediaImages(): Promise<Array<[string, string]>>;
     getTodayOrders(): Promise<Array<Order>>;
     getUserProfile(user: Principal): Promise<UserProfile | null>;
     initializeProducts(): Promise<void>;
     isCallerAdmin(): Promise<boolean>;
     placeOrder(customerName: string, customerPhone: string, items: Array<OrderItem>): Promise<bigint>;
+    removeProductImage(productId: string): Promise<void>;
+    removeSiteMediaImage(key: string): Promise<void>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
+    saveProductImage(productId: string, dataUrl: string): Promise<void>;
+    saveSiteMediaImage(key: string, dataUrl: string): Promise<void>;
     updateOrderStatus(orderId: bigint, status: string): Promise<void>;
     updateProductRate(productId: bigint, newPrice: number): Promise<void>;
 }
@@ -230,6 +236,20 @@ export class Backend implements backendInterface {
             return result;
         }
     }
+    async getProductImages(): Promise<Array<[string, string]>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getProductImages();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getProductImages();
+            return result;
+        }
+    }
     async getProducts(): Promise<Array<Product>> {
         if (this.processError) {
             try {
@@ -241,6 +261,20 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.getProducts();
+            return result;
+        }
+    }
+    async getSiteMediaImages(): Promise<Array<[string, string]>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getSiteMediaImages();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getSiteMediaImages();
             return result;
         }
     }
@@ -314,6 +348,34 @@ export class Backend implements backendInterface {
             return result;
         }
     }
+    async removeProductImage(arg0: string): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.removeProductImage(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.removeProductImage(arg0);
+            return result;
+        }
+    }
+    async removeSiteMediaImage(arg0: string): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.removeSiteMediaImage(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.removeSiteMediaImage(arg0);
+            return result;
+        }
+    }
     async saveCallerUserProfile(arg0: UserProfile): Promise<void> {
         if (this.processError) {
             try {
@@ -325,6 +387,34 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.saveCallerUserProfile(arg0);
+            return result;
+        }
+    }
+    async saveProductImage(arg0: string, arg1: string): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.saveProductImage(arg0, arg1);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.saveProductImage(arg0, arg1);
+            return result;
+        }
+    }
+    async saveSiteMediaImage(arg0: string, arg1: string): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.saveSiteMediaImage(arg0, arg1);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.saveSiteMediaImage(arg0, arg1);
             return result;
         }
     }

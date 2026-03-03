@@ -22,12 +22,19 @@ import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
+  useGetProductImages,
   useGetProducts,
+  useGetSiteMediaImages,
   useInitializeProducts,
   usePlaceOrder,
 } from "../hooks/useQueries";
 import type { Product } from "../hooks/useQueries";
-import { getStoredProductImages, getStoredProductPrices } from "./AdminPortal";
+import {
+  getStoredProductImages,
+  getStoredProductPrices,
+  getStoredSiteMedia,
+  saveLocalOrder,
+} from "./AdminPortal";
 
 interface CartItem {
   product: Product;
@@ -43,10 +50,13 @@ const PRODUCT_IMAGES: Record<string, string> = {
   cleaned: "/assets/generated/product-broiler.dim_400x400.jpg",
 };
 
-function getProductImage(product: Product): string {
+function getProductImage(
+  product: Product,
+  storedImages?: Record<string, string>,
+): string {
   // Check for admin-uploaded custom image first
-  const storedImages = getStoredProductImages();
-  const customImg = storedImages[product.id.toString()];
+  const images = storedImages ?? getStoredProductImages();
+  const customImg = images[product.id.toString()];
   if (customImg) return customImg;
 
   // Fall back to default images by name
@@ -131,6 +141,15 @@ const staggerContainer: Variants = {
   visible: { transition: { staggerChildren: 0.1 } },
 };
 
+const slideInLeftVariants: Variants = {
+  hidden: { opacity: 0, x: -30 },
+  visible: {
+    opacity: 1,
+    x: 0,
+    transition: { duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] },
+  },
+};
+
 export default function PublicWebsite() {
   const [isNavOpen, setIsNavOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
@@ -141,8 +160,14 @@ export default function PublicWebsite() {
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [lastOrderId, setLastOrderId] = useState<bigint | null>(null);
+  const [siteMedia, setSiteMedia] = useState(() => getStoredSiteMedia());
+  const [productImages, setProductImages] = useState(() =>
+    getStoredProductImages(),
+  );
 
   const { data: backendProducts } = useGetProducts();
+  const { data: backendProductImages } = useGetProductImages();
+  const { data: backendSiteMediaImages } = useGetSiteMediaImages();
   const placeOrderMutation = usePlaceOrder();
   const initializeProducts = useInitializeProducts();
 
@@ -159,6 +184,44 @@ export default function PublicWebsite() {
       initMutate();
     }
   }, [backendProducts, initMutate]);
+
+  // Merge backend images with localStorage (backend takes priority)
+  useEffect(() => {
+    if (backendProductImages) {
+      setProductImages((prev) => ({ ...prev, ...backendProductImages }));
+    }
+  }, [backendProductImages]);
+
+  useEffect(() => {
+    if (backendSiteMediaImages) {
+      setSiteMedia((prev) => ({ ...prev, ...backendSiteMediaImages }));
+    }
+  }, [backendSiteMediaImages]);
+
+  // Listen for localStorage changes (from admin portal in same tab or other tabs)
+  useEffect(() => {
+    function syncMedia() {
+      // Merge: backend images take priority, localStorage is fallback
+      setSiteMedia((prev) => ({
+        ...getStoredSiteMedia(),
+        ...backendSiteMediaImages,
+        ...prev, // keep any already-loaded backend images
+      }));
+      setProductImages((prev) => ({
+        ...getStoredProductImages(),
+        ...backendProductImages,
+        ...prev, // keep any already-loaded backend images
+      }));
+    }
+    // Cross-tab sync
+    window.addEventListener("storage", syncMedia);
+    // Same-tab sync: poll every 2 seconds
+    const interval = setInterval(syncMedia, 2000);
+    return () => {
+      window.removeEventListener("storage", syncMedia);
+      clearInterval(interval);
+    };
+  }, [backendProductImages, backendSiteMediaImages]);
 
   // Nav scroll detection
   useEffect(() => {
@@ -223,29 +286,53 @@ export default function PublicWebsite() {
       unit: c.unit,
     }));
 
+    // Build WhatsApp message upfront so it's always available
+    const itemLines = cart
+      .map(
+        (c) =>
+          `• ${c.product.nameEn}: ${c.quantity} ${c.unit} @ ₹${getProductPrice(c.product)}/kg`,
+      )
+      .join("\n");
+
+    let orderId: bigint = BigInt(Date.now() % 1000000);
+    const localOrderId = `order-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const today = new Date().toISOString().split("T")[0];
+
     try {
-      const orderId = await placeOrderMutation.mutateAsync({
+      orderId = await placeOrderMutation.mutateAsync({
         customerName,
         customerPhone,
         items,
       });
-      setLastOrderId(orderId);
-      setOrderSuccess(true);
-
-      // Build WhatsApp message
-      const itemLines = cart
-        .map(
-          (c) =>
-            `• ${c.product.nameEn}: ${c.quantity} ${c.unit} @ ₹${getProductPrice(c.product)}/kg`,
-        )
-        .join("\n");
-      const msg = `🛒 *New Order from Madeena Chicken Center Website*\n\n*Customer:* ${customerName}\n*Phone:* ${customerPhone}\n\n*Order Items:*\n${itemLines}\n\n*Total: ₹${cartTotal}*\n\nOrder ID: ${orderId}`;
-
-      const encoded = encodeURIComponent(msg);
-      window.open(`https://wa.me/918464020096?text=${encoded}`, "_blank");
     } catch {
-      toast.error("Failed to place order. Please try again.");
+      // Backend failed — still proceed with WhatsApp notification
+      console.warn("Order backend failed, proceeding with WhatsApp only");
     }
+
+    // Always save order to localStorage so admin portal can see it
+    saveLocalOrder({
+      id: localOrderId,
+      customerName,
+      customerPhone,
+      items: cart.map((c) => ({
+        productId: c.product.id.toString(),
+        productName: c.product.nameEn,
+        quantity: c.quantity,
+        unit: c.unit,
+        pricePerKg: getProductPrice(c.product),
+      })),
+      totalAmount: cartTotal,
+      status: "pending",
+      createdAt: Date.now(),
+      orderDate: today,
+    });
+
+    setLastOrderId(orderId);
+    setOrderSuccess(true);
+
+    const msg = `🛒 *New Order from Madeena Chicken Center Website*\n\n*Customer:* ${customerName}\n*Phone:* ${customerPhone}\n\n*Order Items:*\n${itemLines}\n\n*Total: ₹${cartTotal}*\n\nOrder ID: ${orderId}`;
+    const encoded = encodeURIComponent(msg);
+    window.open(`https://wa.me/919948606135?text=${encoded}`, "_blank");
   }
 
   function openWhatsApp2() {
@@ -282,23 +369,32 @@ export default function PublicWebsite() {
           <button
             type="button"
             onClick={() => scrollToSection("home")}
-            className="flex flex-col text-left group"
+            className="flex items-center gap-2 text-left group"
             aria-label="Go to top"
           >
-            <span
-              className={`font-display font-bold text-lg leading-tight transition-colors ${
-                isScrolled ? "text-primary" : "text-white"
-              }`}
-            >
-              MADEENA CHICKEN CENTER
-            </span>
-            <span
-              className={`text-xs leading-tight transition-colors ${
-                isScrolled ? "text-accent" : "text-yellow-300"
-              }`}
-            >
-              మదీనా చికెన్ సెంటర్
-            </span>
+            {siteMedia.navLogo && (
+              <img
+                src={siteMedia.navLogo}
+                alt="Madeena Chicken Center Logo"
+                className="w-8 h-8 rounded-full object-cover flex-shrink-0"
+              />
+            )}
+            <div className="flex flex-col">
+              <span
+                className={`font-display font-bold text-lg leading-tight transition-colors ${
+                  isScrolled ? "text-primary" : "text-white"
+                }`}
+              >
+                MADEENA CHICKEN CENTER
+              </span>
+              <span
+                className={`text-xs leading-tight transition-colors ${
+                  isScrolled ? "text-accent" : "text-yellow-300"
+                }`}
+              >
+                మదీనా చికెన్ సెంటర్
+              </span>
+            </div>
           </button>
 
           {/* Desktop Nav */}
@@ -456,7 +552,10 @@ export default function PublicWebsite() {
         {/* Background texture overlay */}
         <div className="absolute inset-0 opacity-20">
           <img
-            src="/assets/generated/hero-bg-red.dim_1920x1080.jpg"
+            src={
+              siteMedia.heroBg ||
+              "/assets/generated/hero-bg-red.dim_1920x1080.jpg"
+            }
             alt=""
             className="w-full h-full object-cover object-center"
             aria-hidden="true"
@@ -586,15 +685,24 @@ export default function PublicWebsite() {
             >
               {/* Circular glowing backdrop */}
               <div className="relative w-full h-full">
-                <div
+                <motion.div
                   className="absolute inset-0 rounded-full"
                   style={{
                     background:
                       "radial-gradient(circle, rgba(255,200,0,0.25) 0%, rgba(220,38,38,0.3) 50%, transparent 75%)",
                   }}
+                  animate={{ scale: [1, 1.04, 1], opacity: [0.6, 0.9, 0.6] }}
+                  transition={{
+                    repeat: Number.POSITIVE_INFINITY,
+                    duration: 3,
+                    ease: "easeInOut",
+                  }}
                 />
                 <motion.img
-                  src="/assets/generated/hero-chicken-dish.dim_700x700.png"
+                  src={
+                    siteMedia.heroChicken ||
+                    "/assets/generated/hero-chicken-dish.dim_700x700.png"
+                  }
                   alt="Fresh chicken dish at Madeena Chicken Center"
                   className="relative z-10 w-full h-full object-contain drop-shadow-2xl"
                   animate={{ y: [0, -12, 0] }}
@@ -651,11 +759,11 @@ export default function PublicWebsite() {
           <motion.div
             initial="hidden"
             whileInView="visible"
-            viewport={{ once: true, margin: "-100px" }}
+            viewport={{ once: true, margin: "-80px" }}
             variants={staggerContainer}
           >
             <motion.div
-              variants={fadeInUpVariants}
+              variants={slideInLeftVariants}
               className="text-center mb-12"
             >
               <Badge className="bg-primary/10 text-primary border-primary/20 mb-3">
@@ -683,7 +791,8 @@ export default function PublicWebsite() {
                   సంతృప్తి మా ప్రధాన లక్ష్యం.
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  📍 Valigonda X Road, Choutuppal - 508252, Telangana
+                  📍 Market Bangarigadda Road, Beside Shadikhana Govt Hospital,
+                  Choutuppal - 508252, Telangana
                 </p>
               </motion.div>
 
@@ -744,11 +853,11 @@ export default function PublicWebsite() {
           <motion.div
             initial="hidden"
             whileInView="visible"
-            viewport={{ once: true, margin: "-100px" }}
+            viewport={{ once: true, margin: "-80px" }}
             variants={staggerContainer}
           >
             <motion.div
-              variants={fadeInUpVariants}
+              variants={slideInLeftVariants}
               className="text-center mb-12"
             >
               <Badge className="bg-primary/10 text-primary border-primary/20 mb-3">
@@ -776,7 +885,7 @@ export default function PublicWebsite() {
                 >
                   <div className="relative overflow-hidden h-48">
                     <img
-                      src={getProductImage(product)}
+                      src={getProductImage(product, productImages)}
                       alt={product.nameEn}
                       className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                       loading="lazy"
@@ -833,11 +942,11 @@ export default function PublicWebsite() {
           <motion.div
             initial="hidden"
             whileInView="visible"
-            viewport={{ once: true, margin: "-100px" }}
+            viewport={{ once: true, margin: "-80px" }}
             variants={staggerContainer}
           >
             <motion.div
-              variants={fadeInUpVariants}
+              variants={slideInLeftVariants}
               className="text-center mb-12"
             >
               <Badge className="bg-primary/10 text-primary border-primary/20 mb-3">
@@ -877,7 +986,7 @@ export default function PublicWebsite() {
                     <div>
                       <h3 className="font-semibold text-foreground">Phone</h3>
                       <p className="text-sm text-muted-foreground mt-1">
-                        +91 84640 20096
+                        +91 99486 06135
                         <br />
                         +91 81256 22399
                       </p>
@@ -906,7 +1015,7 @@ export default function PublicWebsite() {
                   data-ocid="location.map_marker"
                 >
                   <iframe
-                    src="https://maps.google.com/maps?q=valigonda+x+road+choutuppal+508252&output=embed"
+                    src="https://maps.google.com/maps?q=market+bangarigadda+road+beside+shadikhana+govt+hospital+choutuppal&output=embed"
                     width="100%"
                     height="350"
                     style={{ border: 0 }}
@@ -931,11 +1040,11 @@ export default function PublicWebsite() {
           <motion.div
             initial="hidden"
             whileInView="visible"
-            viewport={{ once: true, margin: "-100px" }}
+            viewport={{ once: true, margin: "-80px" }}
             variants={staggerContainer}
           >
             <motion.div
-              variants={fadeInUpVariants}
+              variants={slideInLeftVariants}
               className="text-center mb-12"
             >
               <Badge className="bg-white/20 text-white border-white/30 mb-3">
@@ -958,7 +1067,7 @@ export default function PublicWebsite() {
                 <motion.a
                   variants={fadeInUpVariants}
                   data-ocid="contact.call_button"
-                  href="tel:+918464020096"
+                  href="tel:+919948606135"
                   className="flex items-center justify-center gap-3 p-5 rounded-2xl bg-white text-primary font-bold text-lg shadow-lg hover:shadow-xl transition-all hover:-translate-y-1 active:translate-y-0"
                 >
                   <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
@@ -968,14 +1077,14 @@ export default function PublicWebsite() {
                     <div className="text-xs text-muted-foreground font-normal">
                       Call Us Now
                     </div>
-                    <div>+91 84640 20096</div>
+                    <div>+91 99486 06135</div>
                   </div>
                 </motion.a>
 
                 <motion.a
                   variants={fadeInUpVariants}
                   data-ocid="contact.whatsapp_button"
-                  href="https://wa.me/918464020096"
+                  href="https://wa.me/919948606135"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center justify-center gap-3 p-5 rounded-2xl bg-green-500 text-white font-bold text-lg shadow-lg hover:shadow-xl hover:bg-green-600 transition-all hover:-translate-y-1 active:translate-y-0"
@@ -1001,12 +1110,13 @@ export default function PublicWebsite() {
                     {
                       icon: <MapPin className="h-5 w-5" />,
                       label: "Address",
-                      value: "Valigonda X Road, Choutuppal - 508252",
+                      value:
+                        "Market Bangarigadda Road, Beside Shadikhana Govt Hospital, Choutuppal",
                     },
                     {
                       icon: <Phone className="h-5 w-5" />,
                       label: "Phone 1",
-                      value: "+91 84640 20096",
+                      value: "+91 99486 06135",
                     },
                     {
                       icon: <Phone className="h-5 w-5" />,
@@ -1084,11 +1194,12 @@ export default function PublicWebsite() {
               <div className="space-y-2 text-sm text-gray-400">
                 <p className="flex gap-2">
                   <MapPin className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
-                  Valigonda X Road, Choutuppal - 508252, Telangana
+                  Market Bangarigadda Road, Beside Shadikhana Govt Hospital,
+                  Choutuppal - 508252, Telangana
                 </p>
                 <p className="flex gap-2">
                   <Phone className="h-4 w-4 text-primary flex-shrink-0" />
-                  +91 84640 20096 / +91 81256 22399
+                  +91 99486 06135 / +91 81256 22399
                 </p>
                 <p className="flex gap-2">
                   <Clock className="h-4 w-4 text-primary flex-shrink-0" />
@@ -1184,7 +1295,7 @@ export default function PublicWebsite() {
                       className="flex gap-3 p-3 rounded-xl border border-border bg-card"
                     >
                       <img
-                        src={getProductImage(item.product)}
+                        src={getProductImage(item.product, productImages)}
                         alt={item.product.nameEn}
                         className="w-14 h-14 object-cover rounded-lg flex-shrink-0"
                       />
