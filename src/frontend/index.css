@@ -1,0 +1,147 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Outfit font - modern, clean, professional */
+@font-face {
+  font-family: "Outfit";
+  src: url("/assets/fonts/Outfit.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Fraunces - distinctive display font */
+@font-face {
+  font-family: "Fraunces";
+  src: url("/assets/fonts/Fraunces.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@layer base {
+  :root {
+    --radius: 0.5rem;
+
+    /* Primary: Deep Crimson Red */
+    --primary: 0.52 0.22 27;
+    --primary-foreground: 1 0 0;
+
+    /* Accent: Rich Amber/Gold */
+    --accent: 0.75 0.17 62;
+    --accent-foreground: 0.15 0 0;
+
+    /* Background: Clean White */
+    --background: 0.99 0 0;
+    --foreground: 0.13 0.02 255;
+
+    /* Card: Very light warm gray */
+    --card: 0.985 0.005 85;
+    --card-foreground: 0.13 0.02 255;
+
+    /* Popover */
+    --popover: 0.99 0 0;
+    --popover-foreground: 0.13 0.02 255;
+
+    /* Secondary: Warm cream */
+    --secondary: 0.97 0.01 85;
+    --secondary-foreground: 0.2 0.02 255;
+
+    /* Muted: Light gray */
+    --muted: 0.95 0.005 85;
+    --muted-foreground: 0.5 0.01 255;
+
+    /* Destructive: Same as primary (crimson) */
+    --destructive: 0.52 0.22 27;
+    --destructive-foreground: 1 0 0;
+
+    /* Border and inputs */
+    --border: 0.9 0.01 85;
+    --input: 0.9 0.01 85;
+    --ring: 0.52 0.22 27;
+
+    /* Chart colors */
+    --chart-1: 0.52 0.22 27;
+    --chart-2: 0.75 0.17 62;
+    --chart-3: 0.6 0.12 145;
+    --chart-4: 0.7 0.15 200;
+    --chart-5: 0.55 0.18 300;
+
+    /* Sidebar */
+    --sidebar: 0.985 0.005 85;
+    --sidebar-foreground: 0.13 0.02 255;
+    --sidebar-primary: 0.52 0.22 27;
+    --sidebar-primary-foreground: 1 0 0;
+    --sidebar-accent: 0.97 0.01 85;
+    --sidebar-accent-foreground: 0.2 0.02 255;
+    --sidebar-border: 0.9 0.01 85;
+    --sidebar-ring: 0.52 0.22 27;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+}
+
+@layer utilities {
+  .text-gradient-red {
+    background: linear-gradient(135deg, oklch(0.52 0.22 27), oklch(0.65 0.2 27));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .text-gradient-gold {
+    background: linear-gradient(135deg, oklch(0.75 0.17 62), oklch(0.82 0.15 72));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .hero-overlay {
+    background: linear-gradient(
+      135deg,
+      oklch(0.15 0.05 27 / 0.85) 0%,
+      oklch(0.2 0.04 27 / 0.7) 50%,
+      oklch(0.15 0.03 27 / 0.5) 100%
+    );
+  }
+
+  .card-hover {
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+  }
+
+  .card-hover:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 32px -4px oklch(0.52 0.22 27 / 0.2),
+      0 4px 12px -2px oklch(0.52 0.22 27 / 0.1);
+  }
+
+  .section-pattern {
+    background-image: radial-gradient(
+        circle at 20% 80%,
+        oklch(0.52 0.22 27 / 0.04) 0%,
+        transparent 50%
+      ),
+      radial-gradient(
+        circle at 80% 20%,
+        oklch(0.75 0.17 62 / 0.04) 0%,
+        transparent 50%
+      );
+  }
+
+  .nav-scrolled {
+    backdrop-filter: blur(12px);
+    background: oklch(0.99 0 0 / 0.92);
+    box-shadow: 0 2px 20px oklch(0.52 0.22 27 / 0.1);
+  }
+}
