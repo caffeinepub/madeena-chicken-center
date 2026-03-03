@@ -399,7 +399,7 @@ export default function PublicWebsite() {
                 className={`text-xs leading-tight font-medium transition-colors ${
                   isScrolled ? "text-muted-foreground" : "text-white/70"
                 }`}
-              ></span>
+              />
             </div>
           </button>
 
@@ -735,7 +735,7 @@ export default function PublicWebsite() {
                   transition={{ delay: 1, type: "spring" }}
                   className="absolute top-8 left-0 bg-yellow-400 text-red-800 rounded-xl px-3 py-1.5 shadow-xl z-20 font-bold text-sm"
                 >
-                  20% Fresh Daily
+                  100% Fresh Daily
                 </motion.div>
               </div>
             </motion.div>
