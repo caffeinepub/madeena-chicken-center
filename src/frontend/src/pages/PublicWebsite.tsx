@@ -344,6 +344,7 @@ export default function PublicWebsite() {
       `https://wa.me/918125622399?text=${encodeURIComponent(msg)}`,
       "_blank",
     );
+    // openWhatsApp2 stays as 8125622399 (same for both sites)
   }
 
   function closeOrderModal() {
@@ -394,6 +395,11 @@ export default function PublicWebsite() {
               >
                 మదీనా చికెన్ సెంటర్
               </span>
+              <span
+                className={`text-xs leading-tight font-medium transition-colors ${
+                  isScrolled ? "text-muted-foreground" : "text-white/70"
+                }`}
+              ></span>
             </div>
           </button>
 
@@ -1015,7 +1021,7 @@ export default function PublicWebsite() {
                   data-ocid="location.map_marker"
                 >
                   <iframe
-                    src="https://maps.google.com/maps?q=7V2V%2B8RG+Bangarigadda+Rd+near+AMR+Shadikhana+Choutuppal+Telangana+508252&output=embed"
+                    src="https://maps.google.com/maps?q=Bangarigadda+Road+near+AMR+Shadikhana+Choutuppal+Telangana+508252&output=embed"
                     width="100%"
                     height="350"
                     style={{ border: 0 }}
@@ -1157,7 +1163,7 @@ export default function PublicWebsite() {
               <h3 className="font-display text-lg font-bold text-white mb-1">
                 MADEENA CHICKEN CENTER
               </h3>
-              <p className="text-accent text-sm mb-3">మదీనా చికెన్ సెంటర్</p>
+              <p className="text-accent text-sm">మదీనా చికెన్ సెంటర్</p>
               <p className="text-gray-400 text-sm">
                 Fresh & Quality Chicken Everyday
               </p>
