@@ -161,8 +161,8 @@ function setStoredProductPrice(productId: string, price: number) {
 }
 
 const ADMIN_SESSION_KEY = "madeena_admin_session";
-const ADMIN_USERNAME = "admin";
-const ADMIN_PASSWORD = "madeena2024";
+const ADMIN_USERNAME = "admin2";
+const ADMIN_PASSWORD = "madeena2025";
 
 function getTodayDate() {
   return new Date().toISOString().split("T")[0];

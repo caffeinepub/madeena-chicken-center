@@ -791,8 +791,8 @@ export default function PublicWebsite() {
                   సంతృప్తి మా ప్రధాన లక్ష్యం.
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  📍 Market Bangarigadda Road, Beside Shadikhana Govt Hospital,
-                  Choutuppal - 508252, Telangana
+                  📍 7V2V+8RG, Bangarigadda Rd, near AMR Shadikhana, Choutuppal,
+                  Telangana 508252
                 </p>
               </motion.div>
 
@@ -971,11 +971,11 @@ export default function PublicWebsite() {
                     <div>
                       <h3 className="font-semibold text-foreground">Address</h3>
                       <p className="text-sm text-muted-foreground mt-1">
-                        Valigonda X Road,
+                        7V2V+8RG, Bangarigadda Rd,
                         <br />
-                        Choutuppal - 508252,
+                        near AMR Shadikhana, Choutuppal,
                         <br />
-                        Telangana, India
+                        Telangana 508252
                       </p>
                     </div>
                   </div>
@@ -1015,7 +1015,7 @@ export default function PublicWebsite() {
                   data-ocid="location.map_marker"
                 >
                   <iframe
-                    src="https://maps.google.com/maps?q=market+bangarigadda+road+beside+shadikhana+govt+hospital+choutuppal&output=embed"
+                    src="https://maps.google.com/maps?q=7V2V%2B8RG+Bangarigadda+Rd+near+AMR+Shadikhana+Choutuppal+Telangana+508252&output=embed"
                     width="100%"
                     height="350"
                     style={{ border: 0 }}
@@ -1111,7 +1111,7 @@ export default function PublicWebsite() {
                       icon: <MapPin className="h-5 w-5" />,
                       label: "Address",
                       value:
-                        "Market Bangarigadda Road, Beside Shadikhana Govt Hospital, Choutuppal",
+                        "7V2V+8RG, Bangarigadda Rd, near AMR Shadikhana, Choutuppal, Telangana 508252",
                     },
                     {
                       icon: <Phone className="h-5 w-5" />,
@@ -1194,8 +1194,8 @@ export default function PublicWebsite() {
               <div className="space-y-2 text-sm text-gray-400">
                 <p className="flex gap-2">
                   <MapPin className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
-                  Market Bangarigadda Road, Beside Shadikhana Govt Hospital,
-                  Choutuppal - 508252, Telangana
+                  7V2V+8RG, Bangarigadda Rd, near AMR Shadikhana, Choutuppal,
+                  Telangana 508252
                 </p>
                 <p className="flex gap-2">
                   <Phone className="h-4 w-4 text-primary flex-shrink-0" />
